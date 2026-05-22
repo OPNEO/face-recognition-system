@@ -13,16 +13,6 @@ from streamlit_autorefresh import st_autorefresh
 from admin_registration import register_user
 
 
-"""
-Description:
-    Configure Streamlit page.
-
-Args:
-    None
-
-Returns:
-    None
-"""
 
 st.set_page_config(
 
@@ -33,16 +23,7 @@ st.set_page_config(
 )
 
 
-"""
-Description:
-    Auto refresh dashboard.
 
-Args:
-    None
-
-Returns:
-    None
-"""
 
 st_autorefresh(
 
@@ -53,32 +34,14 @@ st_autorefresh(
 )
 
 
-"""
-Description:
-    Initialize session state.
 
-Args:
-    None
-
-Returns:
-    None
-"""
 
 if "logged_in" not in st.session_state:
 
     st.session_state.logged_in = False
 
 
-"""
-Description:
-    Create SQLAlchemy engine.
 
-Args:
-    None
-
-Returns:
-    engine
-"""
 
 
 def connect_db():
@@ -92,17 +55,7 @@ def connect_db():
     return engine
 
 
-"""
-Description:
-    Authenticate admin login.
 
-Args:
-    username
-    password
-
-Returns:
-    bool
-"""
 
 
 def authenticate(
@@ -155,16 +108,7 @@ def authenticate(
     return result is not None
 
 
-"""
-Description:
-    Load users.
 
-Args:
-    None
-
-Returns:
-    DataFrame
-"""
 
 
 def load_users():
@@ -199,16 +143,7 @@ def load_users():
     return dataframe
 
 
-"""
-Description:
-    Load attendance.
 
-Args:
-    None
-
-Returns:
-    DataFrame
-"""
 
 
 def load_attendance():
@@ -244,16 +179,7 @@ def load_attendance():
     return dataframe
 
 
-"""
-Description:
-    Login screen.
 
-Args:
-    None
-
-Returns:
-    None
-"""
 
 if not st.session_state.logged_in:
 
@@ -306,16 +232,7 @@ if not st.session_state.logged_in:
     st.stop()
 
 
-"""
-Description:
-    Sidebar
 
-Args:
-    None
-
-Returns:
-    None
-"""
 
 st.sidebar.title(
 
@@ -352,16 +269,7 @@ page = st.sidebar.radio(
 )
 
 
-"""
-Description:
-    Register page.
 
-Args:
-    None
-
-Returns:
-    None
-"""
 
 if page == "Register User":
 
@@ -456,16 +364,7 @@ if page == "Register User":
                 )
 
 
-"""
-Description:
-    Dashboard page.
 
-Args:
-    None
-
-Returns:
-    None
-"""
 
 if page == "Dashboard":
 
@@ -584,16 +483,7 @@ if page == "Dashboard":
     )
 
 
-"""
-Description:
-    Manage users.
 
-Args:
-    None
-
-Returns:
-    None
-"""
 
 if page == "Manage Users":
 
