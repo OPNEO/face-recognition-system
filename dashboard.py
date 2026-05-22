@@ -1,28 +1,16 @@
+import os
+import shutil
+
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 
 from sqlalchemy import create_engine
-from streamlit_autorefresh import st_autorefresh
-from admin_registration import register_user
-import shutil
 from sqlalchemy import text
-import os
-"""
-Description:
-    Auto refresh dashboard.
 
-Args:
-    None
+from streamlit_autorefresh import st_autorefresh
 
-Returns:
-    None
-"""
-
-st_autorefresh(
-    interval=5000,
-    key="dashboard_refresh"
-)
+from admin_registration import register_user
 
 
 """
@@ -41,7 +29,44 @@ st.set_page_config(
     page_title="Face Recognition Dashboard",
 
     layout="wide"
+
 )
+
+
+"""
+Description:
+    Auto refresh dashboard.
+
+Args:
+    None
+
+Returns:
+    None
+"""
+
+st_autorefresh(
+
+    interval=5000,
+
+    key="dashboard_refresh"
+
+)
+
+
+"""
+Description:
+    Initialize session state.
+
+Args:
+    None
+
+Returns:
+    None
+"""
+
+if "logged_in" not in st.session_state:
+
+    st.session_state.logged_in = False
 
 
 """
@@ -52,7 +77,7 @@ Args:
     None
 
 Returns:
-    SQLAlchemy engine
+    engine
 """
 
 
@@ -69,19 +94,82 @@ def connect_db():
 
 """
 Description:
-    Load registered users.
+    Authenticate admin login.
+
+Args:
+    username
+    password
+
+Returns:
+    bool
+"""
+
+
+def authenticate(
+
+        username,
+        password
+
+):
+
+    engine = connect_db()
+
+    connection = engine.connect()
+
+    query = text(
+        """
+
+        SELECT *
+
+        FROM admin_users
+
+        WHERE
+
+        username=:username
+
+        AND
+
+        password=:password
+
+        """
+    )
+
+    result = connection.execute(
+
+        query,
+
+        {
+
+            "username":
+            username,
+
+            "password":
+            password
+
+        }
+
+    ).fetchone()
+
+    connection.close()
+
+    return result is not None
+
+
+"""
+Description:
+    Load users.
 
 Args:
     None
 
 Returns:
-        DataFrame
+    DataFrame
 """
 
 
 def load_users():
 
-    connection = connect_db()
+    engine = connect_db()
 
     query = """
 
@@ -101,10 +189,12 @@ def load_users():
     dataframe = pd.read_sql(
 
         query,
-        connection
+
+        engine
+
     )
 
-    connection.dispose()
+    engine.dispose()
 
     return dataframe
 
@@ -117,13 +207,13 @@ Args:
     None
 
 Returns:
-        DataFrame
+    DataFrame
 """
 
 
 def load_attendance():
 
-    connection = connect_db()
+    engine = connect_db()
 
     query = """
 
@@ -144,17 +234,81 @@ def load_attendance():
     dataframe = pd.read_sql(
 
         query,
-        connection
+
+        engine
+
     )
 
-    connection.dispose()
+    engine.dispose()
 
     return dataframe
 
 
 """
 Description:
-    Sidebar navigation
+    Login screen.
+
+Args:
+    None
+
+Returns:
+    None
+"""
+
+if not st.session_state.logged_in:
+
+    st.title(
+
+        "Admin Login"
+
+    )
+
+    username = st.text_input(
+
+        "Username"
+
+    )
+
+    password = st.text_input(
+
+        "Password",
+
+        type="password"
+
+    )
+
+    if st.button(
+
+            "Login"
+
+    ):
+
+        if authenticate(
+
+                username,
+
+                password
+
+        ):
+
+            st.session_state.logged_in = True
+
+            st.rerun()
+
+        else:
+
+            st.error(
+
+                "Invalid credentials"
+
+            )
+
+    st.stop()
+
+
+"""
+Description:
+    Sidebar
 
 Args:
     None
@@ -164,8 +318,22 @@ Returns:
 """
 
 st.sidebar.title(
+
     "Admin Panel"
+
 )
+
+
+if st.sidebar.button(
+
+        "Logout"
+
+):
+
+    st.session_state.logged_in = False
+
+    st.rerun()
+
 
 page = st.sidebar.radio(
 
@@ -180,12 +348,13 @@ page = st.sidebar.radio(
         "Manage Users"
 
     ]
+
 )
 
 
 """
 Description:
-    Register page
+    Register page.
 
 Args:
     None
@@ -194,81 +363,102 @@ Returns:
     None
 """
 
-
 if page == "Register User":
 
     st.title(
+
         "User Registration"
+
     )
 
     name = st.text_input(
+
         "Name"
+
     )
 
     employee_id = st.text_input(
+
         "Employee ID"
+
     )
 
     email = st.text_input(
+
         "Email"
+
     )
 
     department = st.text_input(
+
         "Department"
+
     )
 
-
     if st.button(
+
             "Start Face Registration"
+
     ):
 
         if (
 
-                not name
-                or
-                not employee_id
-                or
-                not email
-                or
-                not department
+            not name
+            or
+            not employee_id
+            or
+            not email
+            or
+            not department
 
         ):
 
             st.error(
+
                 "Fill all fields"
+
             )
 
         else:
 
             with st.spinner(
 
-                "Opening camera..."
+                    "Opening camera..."
+
             ):
 
                 success, message = register_user(
 
                     name,
+
                     employee_id,
+
                     email,
+
                     department
+
                 )
 
-                if success:
+            if success:
 
-                    st.success(
-                        message
-                    )
+                st.success(
 
-                else:
+                    message
 
-                    st.warning(
-                        message
-                    )
+                )
+
+            else:
+
+                st.warning(
+
+                    message
+
+                )
 
 
 """
 Description:
-    Dashboard page
+    Dashboard page.
 
 Args:
     None
@@ -277,22 +467,19 @@ Returns:
     None
 """
 
-
 if page == "Dashboard":
 
     st.title(
+
         "Face Recognition Dashboard"
+
     )
 
     users = load_users()
 
     attendance = load_attendance()
 
-
-    col1, col2, col3 = st.columns(
-        3
-    )
-
+    col1, col2, col3 = st.columns(3)
 
     with col1:
 
@@ -301,8 +488,8 @@ if page == "Dashboard":
             "Registered Users",
 
             len(users)
-        )
 
+        )
 
     with col2:
 
@@ -311,19 +498,23 @@ if page == "Dashboard":
             "Attendance Records",
 
             len(attendance)
-        )
 
+        )
 
     with col3:
 
         today_count = len(
 
             attendance[
+
                 attendance[
                     "attendance_date"
                 ]
+
                 ==
+
                 pd.Timestamp.today().date()
+
             ]
 
         )
@@ -333,14 +524,15 @@ if page == "Dashboard":
             "Today's Events",
 
             today_count
-        )
 
+        )
 
     st.divider()
 
-
     st.subheader(
+
         "IN / OUT Distribution"
+
     )
 
     chart = px.histogram(
@@ -356,14 +548,15 @@ if page == "Dashboard":
         chart,
 
         width="stretch"
-    )
 
+    )
 
     st.divider()
 
-
     st.subheader(
+
         "Registered Users"
+
     )
 
     st.dataframe(
@@ -371,14 +564,15 @@ if page == "Dashboard":
         users,
 
         width="stretch"
-    )
 
+    )
 
     st.divider()
 
-
     st.subheader(
+
         "Attendance History"
+
     )
 
     st.dataframe(
@@ -386,44 +580,13 @@ if page == "Dashboard":
         attendance,
 
         width="stretch"
-    )
-
-
-    st.divider()
-
-
-    search = st.text_input(
-
-        "Search Employee"
 
     )
 
 
-    if search:
-
-        filtered = users[
-
-            users[
-                "name"
-            ].str.contains(
-
-                search,
-
-                case=False
-            )
-
-        ]
-
-        st.dataframe(
-
-            filtered,
-
-            width="stretch"
-        )
-
-        """
+"""
 Description:
-    Admin user management.
+    Manage users.
 
 Args:
     None
@@ -432,11 +595,12 @@ Returns:
     None
 """
 
-
 if page == "Manage Users":
 
     st.title(
+
         "Manage Users"
+
     )
 
     users = load_users()
@@ -444,7 +608,9 @@ if page == "Manage Users":
     if len(users) == 0:
 
         st.warning(
+
             "No users found"
+
         )
 
     else:
@@ -459,7 +625,8 @@ if page == "Manage Users":
 
         selected_data = users[
 
-            users["name"] ==
+            users["name"]
+            ==
             selected_user
 
         ].iloc[0]
@@ -504,7 +671,9 @@ if page == "Manage Users":
         with col1:
 
             if st.button(
+
                     "Update User"
+
             ):
 
                 engine = connect_db()
@@ -526,7 +695,9 @@ if page == "Manage Users":
 
                     department=:dept
 
-                    WHERE name=:old_name
+                    WHERE
+
+                    name=:old_name
 
                     """
                 )
@@ -553,6 +724,7 @@ if page == "Manage Users":
                         selected_user
 
                     }
+
                 )
 
                 connection.commit()
@@ -560,14 +732,18 @@ if page == "Manage Users":
                 connection.close()
 
                 st.success(
-                    "Updated"
+
+                    "User Updated"
+
                 )
 
 
         with col2:
 
             if st.button(
+
                     "Delete User"
+
             ):
 
                 engine = connect_db()
@@ -582,6 +758,7 @@ if page == "Manage Users":
                     FROM people_master
 
                     WHERE
+
                     name=:name
 
                     """
@@ -604,17 +781,16 @@ if page == "Manage Users":
 
                 connection.close()
 
-
                 dataset_folder = (
 
-                    f"dataset/"
-                    f"{selected_user}"
+                    f"dataset/{selected_user}"
 
                 )
 
                 if os.path.exists(
 
                         dataset_folder
+
                 ):
 
                     shutil.rmtree(
@@ -623,7 +799,10 @@ if page == "Manage Users":
 
                     )
 
-
                 st.success(
-                    "User deleted"
+
+                    "User Deleted"
+
                 )
+
+                st.rerun()

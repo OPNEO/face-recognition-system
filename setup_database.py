@@ -2,18 +2,19 @@ import psycopg2
 
 
 """
-    Description:
-        Create database tables.
+Description:
+    Create all database tables
+    and insert default admin.
 
-    Args:
-        None
+Args:
+    None
 
-    Returns:
-        None
+Returns:
+    None
 """
 
 
-connection=psycopg2.connect(
+connection = psycopg2.connect(
 
     host="localhost",
 
@@ -25,7 +26,14 @@ connection=psycopg2.connect(
 
 )
 
-cursor=connection.cursor()
+cursor = connection.cursor()
+
+
+"""
+Description:
+    Create people table
+"""
+
 
 cursor.execute(
 """
@@ -46,10 +54,18 @@ CREATE TABLE IF NOT EXISTS people_master(
 
     created_at TIMESTAMP
     DEFAULT CURRENT_TIMESTAMP
+
 );
 
 """
 )
+
+
+"""
+Description:
+    Create attendance table
+"""
+
 
 cursor.execute(
 """
@@ -69,10 +85,74 @@ CREATE TABLE IF NOT EXISTS attendance_logs(
 
     attendance_date DATE
     DEFAULT CURRENT_DATE
+
 );
 
 """
 )
+
+
+"""
+Description:
+    Create admin table
+"""
+
+
+cursor.execute(
+"""
+
+CREATE TABLE IF NOT EXISTS admin_users(
+
+    id SERIAL PRIMARY KEY,
+
+    username VARCHAR(50)
+    UNIQUE,
+
+    password VARCHAR(255)
+
+);
+
+"""
+)
+
+
+"""
+Description:
+    Insert default admin.
+
+Args:
+    username=admin
+    password=admin123
+
+Returns:
+    row
+"""
+
+
+cursor.execute(
+"""
+
+INSERT INTO admin_users(
+
+    username,
+    password
+
+)
+
+VALUES(
+
+    'admin',
+    'admin123'
+
+)
+
+ON CONFLICT(username)
+
+DO NOTHING
+
+"""
+)
+
 
 connection.commit()
 
@@ -80,6 +160,9 @@ cursor.close()
 
 connection.close()
 
+
 print(
+
     "Database setup complete"
+
 )
