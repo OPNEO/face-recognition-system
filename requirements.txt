@@ -1,0 +1,11 @@
+opencv-python
+deepface
+tensorflow
+tf-keras
+psycopg2-binary
+numpy
+scikit-learn
+streamlit
+pandas
+plotly
+streamlit-autorefresh

@@ -1,0 +1,35 @@
+"""
+Description:
+    Ignore unnecessary files.
+
+Args:
+    None
+
+Returns:
+    None
+"""
+
+__pycache__/
+*.pyc
+*.pyo
+
+venv/
+env/
+
+dataset/
+
+*.db
+
+.idea/
+
+.vscode/
+
+.ipynb_checkpoints/
+
+.DS_Store
+
+*.log
+
+tensorflow_logs/
+
+.env
