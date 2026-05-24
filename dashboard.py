@@ -11,12 +11,61 @@ from sqlalchemy import text
 from streamlit_autorefresh import st_autorefresh
 
 from admin_registration import register_user
+from deepface import DeepFace
+import cv2
+import numpy as np
+from PIL import Image
+from streamlit_webrtc import webrtc_streamer
+from live_attendance import video_frame_callback
+import base64
+
+def autoplay_audio(
+        file_path
+):
+
+    with open(
+
+            file_path,
+
+            "rb"
+
+    ) as file:
+
+        data=file.read()
 
 
+    b64=base64.b64encode(
 
+        data
+
+    ).decode()
+
+
+    md=f"""
+
+    <audio autoplay>
+
+    <source
+
+    src="data:audio/mp3;base64,{b64}"
+
+    type="audio/mp3">
+
+    </audio>
+
+    """
+
+
+    st.markdown(
+
+        md,
+
+        unsafe_allow_html=True
+
+    )
 st.set_page_config(
 
-    page_title="Face Recognition Dashboard",
+    page_title="SSIEMS Face Recognition Dashboard",
 
     layout="wide"
 
@@ -179,6 +228,34 @@ def load_attendance():
     return dataframe
 
 
+def load_unknown_faces():
+
+    engine = connect_db()
+
+    query = """
+
+    SELECT
+
+        image_path,
+        detected_at
+
+    FROM unknown_faces
+
+    ORDER BY detected_at DESC
+
+    """
+
+    dataframe = pd.read_sql(
+
+        query,
+
+        engine
+
+    )
+
+    engine.dispose()
+
+    return dataframe
 
 
 if not st.session_state.logged_in:
@@ -262,7 +339,11 @@ page = st.sidebar.radio(
 
         "Register User",
 
-        "Manage Users"
+        "Manage Users",
+
+        "Unknown Faces",
+
+        "Live Attendance"
 
     ]
 
@@ -274,94 +355,178 @@ page = st.sidebar.radio(
 if page == "Register User":
 
     st.title(
-
-        "User Registration"
-
+        "Student Registration"
     )
 
     name = st.text_input(
-
-        "Name"
-
+        "Student Name"
     )
 
     employee_id = st.text_input(
-
-        "Employee ID"
-
+        "Student ID"
     )
 
     email = st.text_input(
-
         "Email"
-
     )
 
     department = st.text_input(
-
-        "Department"
-
+        "Department/Class"
     )
 
+
+    if "embeddings" not in st.session_state:
+
+        st.session_state.embeddings=[]
+
+
+    st.subheader(
+        "Camera"
+    )
+
+
+    image = st.camera_input(
+        "Open Camera"
+    )
+
+
+    if image:
+
+        image_file = Image.open(
+            image
+        )
+
+        frame = np.array(
+            image_file
+        )
+
+        frame = cv2.cvtColor(
+
+            frame,
+
+            cv2.COLOR_RGB2BGR
+
+        )
+
+
+        st.image(
+
+            frame,
+
+            channels="BGR"
+
+        )
+
+
+        try:
+
+            embedding = DeepFace.represent(
+
+                img_path=frame,
+
+                model_name="Facenet",
+
+                enforce_detection=False
+
+            )
+
+
+            vector=np.array(
+
+                embedding[0][
+                    "embedding"
+                ]
+
+            )
+
+
+            if len(
+                    st.session_state.embeddings
+            ) < 5:
+
+                st.session_state.embeddings.append(
+
+                    vector
+
+                )
+
+
+                st.success(
+
+                    f"Captured "
+
+                    f"{len(st.session_state.embeddings)}/5"
+
+                )
+
+
+                st.progress(
+
+                    len(
+                        st.session_state.embeddings
+                    )/5
+
+                )
+
+        except:
+
+            st.warning(
+                "Face not detected"
+            )
+
+
     if st.button(
-
-            "Start Face Registration"
-
+            "Complete Registration"
     ):
 
-        if (
+        if len(
+                st.session_state.embeddings
+        ) < 5:
 
-            not name
-            or
-            not employee_id
-            or
-            not email
-            or
-            not department
-
-        ):
-
-            st.error(
-
-                "Fill all fields"
-
+            st.warning(
+                "Waiting for 5 captures"
             )
 
         else:
 
-            with st.spinner(
+            average = np.mean(
 
-                    "Opening camera..."
+                st.session_state.embeddings,
 
-            ):
+                axis=0
 
-                success, message = register_user(
+            )
 
-                    name,
 
-                    employee_id,
+            success,message=register_user(
 
-                    email,
+                name,
 
-                    department
+                employee_id,
 
-                )
+                email,
+
+                department,
+
+                average
+
+            )
+
 
             if success:
 
                 st.success(
-
                     message
-
                 )
 
             else:
 
                 st.warning(
-
                     message
-
                 )
+
+
+            st.session_state.embeddings=[]
 
 
 
@@ -370,7 +535,7 @@ if page == "Dashboard":
 
     st.title(
 
-        "Face Recognition Dashboard"
+        "SSIEMS Face Recognition Dashboard"
 
     )
 
@@ -378,7 +543,8 @@ if page == "Dashboard":
 
     attendance = load_attendance()
 
-    col1, col2, col3 = st.columns(3)
+    col1,col2,col3=st.columns(3)
+
 
     with col1:
 
@@ -390,6 +556,7 @@ if page == "Dashboard":
 
         )
 
+
     with col2:
 
         st.metric(
@@ -400,9 +567,10 @@ if page == "Dashboard":
 
         )
 
+
     with col3:
 
-        today_count = len(
+        today_count=len(
 
             attendance[
 
@@ -426,7 +594,9 @@ if page == "Dashboard":
 
         )
 
+
     st.divider()
+
 
     st.subheader(
 
@@ -434,13 +604,15 @@ if page == "Dashboard":
 
     )
 
-    chart = px.histogram(
+
+    chart=px.histogram(
 
         attendance,
 
         x="event_type"
 
     )
+
 
     st.plotly_chart(
 
@@ -450,13 +622,16 @@ if page == "Dashboard":
 
     )
 
+
     st.divider()
+
 
     st.subheader(
 
         "Registered Users"
 
     )
+
 
     st.dataframe(
 
@@ -465,6 +640,148 @@ if page == "Dashboard":
         width="stretch"
 
     )
+
+
+    st.divider()
+
+
+    st.subheader(
+
+        "Attendance History"
+
+    )
+
+
+    st.dataframe(
+
+        attendance,
+
+        width="stretch"
+
+    )
+
+
+    st.divider()
+
+
+    st.subheader(
+
+        "Student Attendance Lookup"
+
+    )
+
+
+    student_list=users[
+
+        "name"
+
+    ].unique()
+
+
+    selected_student=st.selectbox(
+
+        "Select Student",
+
+        student_list
+
+    )
+
+
+    student_history=attendance[
+
+        attendance[
+            "name"
+        ]
+
+        ==
+
+        selected_student
+
+    ]
+
+
+    if len(
+
+        student_history
+
+    )>0:
+
+
+        col1,col2=st.columns(2)
+
+
+        with col1:
+
+            total_in=len(
+
+                student_history[
+
+                    student_history[
+                        "event_type"
+                    ]
+
+                    ==
+
+                    "IN"
+
+                ]
+
+            )
+
+
+            st.metric(
+
+                "Total IN",
+
+                total_in
+
+            )
+
+
+        with col2:
+
+            total_out=len(
+
+                student_history[
+
+                    student_history[
+                        "event_type"
+                    ]
+
+                    ==
+
+                    "OUT"
+
+                ]
+
+            )
+
+
+            st.metric(
+
+                "Total OUT",
+
+                total_out
+
+            )
+
+
+        st.dataframe(
+
+            student_history,
+
+            width="stretch"
+
+        )
+
+
+    else:
+
+        st.warning(
+
+            "No attendance found"
+
+        )
 
     st.divider()
 
@@ -696,3 +1013,62 @@ if page == "Manage Users":
                 )
 
                 st.rerun()
+if page == "Unknown Faces":
+
+    st.title(
+        "Unknown Face Logs"
+    )
+
+    unknown_data = load_unknown_faces()
+
+
+    if len(unknown_data)==0:
+
+        st.warning(
+            "No unknown faces detected"
+        )
+
+    else:
+
+        for _, row in unknown_data.iterrows():
+
+            st.image(
+
+                row["image_path"],
+
+                width=300
+
+            )
+
+            st.write(
+
+                f"Detected: "
+
+                f"{row['detected_at']}"
+
+            )
+
+            st.divider()
+
+if page=="Live Attendance":
+
+    st.title(
+        "Live Gate Camera"
+    )
+
+    webrtc_streamer(
+
+        key="attendance",
+
+        video_frame_callback=
+        video_frame_callback,
+
+        media_stream_constraints={
+
+            "video":True,
+
+            "audio":False
+
+        }
+
+    )

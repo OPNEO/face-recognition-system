@@ -36,7 +36,7 @@ def connect_db():
         name(str)
 
     Returns:
-        None
+        str
 """
 
 
@@ -53,14 +53,18 @@ def mark_attendance(
         """
 
         SELECT
+
             event_type,
             log_time
 
         FROM attendance_logs
 
         WHERE
+
             employee_id=%s
-            AND attendance_date=CURRENT_DATE
+
+            AND attendance_date=
+            CURRENT_DATE
 
         ORDER BY log_time DESC
 
@@ -69,27 +73,43 @@ def mark_attendance(
         """,
 
         (employee_id,)
+
     )
+
 
     result=cursor.fetchone()
 
+
     """
         Description:
-            Avoid duplicate
-            scans within 1 minute.
+            Avoid duplicate scans
+            within 1 minute.
     """
+
 
     if result:
 
         last_event,last_time=result
 
-        if datetime.now()-last_time < timedelta(minutes=1):
+
+        if (
+
+            datetime.now()
+            -
+            last_time
+
+        ) < timedelta(
+
+            minutes=1
+
+        ):
 
             cursor.close()
 
             connection.close()
 
-            return
+            return None
+
 
         if last_event=="IN":
 
@@ -103,6 +123,7 @@ def mark_attendance(
 
         new_event="IN"
 
+
     cursor.execute(
         """
 
@@ -115,26 +136,41 @@ def mark_attendance(
         )
 
         VALUES(
+
             %s,
             %s,
             %s
+
         )
 
         """,
 
         (
+
             employee_id,
+
             name,
+
             new_event
+
         )
+
     )
+
 
     connection.commit()
 
+
     print(
-        f"{name}: {new_event}"
+
+        f"{name} : {new_event}"
+
     )
+
 
     cursor.close()
 
     connection.close()
+
+
+    return new_event

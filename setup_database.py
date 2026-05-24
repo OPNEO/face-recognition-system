@@ -153,6 +153,22 @@ DO NOTHING
 """
 )
 
+cursor.execute(
+"""
+
+CREATE TABLE IF NOT EXISTS unknown_faces(
+
+    id SERIAL PRIMARY KEY,
+
+    image_path VARCHAR(255),
+
+    detected_at TIMESTAMP
+    DEFAULT CURRENT_TIMESTAMP
+
+);
+
+"""
+)
 
 connection.commit()
 

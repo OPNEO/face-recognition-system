@@ -1,23 +1,8 @@
-import os
-import cv2
-import numpy as np
 import psycopg2
+import numpy as np
 
-from deepface import DeepFace
 from psycopg2.extras import Json
 from sklearn.metrics.pairwise import cosine_similarity
-
-
-"""
-Description:
-    Connect to PostgreSQL database.
-
-Args:
-    None
-
-Returns:
-    PostgreSQL connection
-"""
 
 
 def connect_db():
@@ -31,22 +16,6 @@ def connect_db():
         password="1234"
 
     )
-
-
-"""
-Description:
-    Check whether face already exists.
-
-Args:
-    new_embedding (numpy array)
-
-Returns:
-    tuple:
-        (
-            exists,
-            matched_name
-        )
-"""
 
 
 def face_exists(
@@ -75,18 +44,22 @@ def face_exists(
 
     connection.close()
 
+
     for (
 
-            existing_name,
-            existing_embedding
+        existing_name,
+        existing_embedding
 
     ) in records:
 
-        existing_vector = np.array(
+        existing_vector=np.array(
+
             existing_embedding
+
         )
 
-        score = cosine_similarity(
+
+        score=cosine_similarity(
 
             new_embedding.reshape(
                 1,
@@ -100,16 +73,6 @@ def face_exists(
 
         )[0][0]
 
-        """
-        Description:
-            Face similarity threshold.
-
-        Args:
-            None
-
-        Returns:
-            duplicate match
-        """
 
         if score > 0.75:
 
@@ -121,6 +84,7 @@ def face_exists(
 
             )
 
+
     return (
 
         False,
@@ -130,218 +94,26 @@ def face_exists(
     )
 
 
-"""
-Description:
-    Register a new user.
-
-Args:
-    name (str)
-    employee_id (str)
-    email (str)
-    department (str)
-
-Returns:
-    tuple:
-        (
-            success,
-            message
-        )
-"""
-
-
 def register_user(
 
         name,
+
         employee_id,
+
         email,
-        department
+
+        department,
+
+        average
+
 ):
 
-    folder = os.path.join(
-        "dataset",
-        name
-    )
-
-    os.makedirs(
-
-        folder,
-
-        exist_ok=True
-    )
-
-    camera = cv2.VideoCapture(
-        0
-    )
-
-    detector = cv2.CascadeClassifier(
-
-        "haarcascade_frontalface_default.xml"
-
-    )
-
-    image_count = 0
-
-    embeddings = []
-
-    MAX_IMAGES = 10
-
-    while image_count < MAX_IMAGES:
-
-        success, frame = camera.read()
-
-        if not success:
-            continue
-
-        gray = cv2.cvtColor(
-
-            frame,
-
-            cv2.COLOR_BGR2GRAY
-        )
-
-        faces = detector.detectMultiScale(
-
-            gray,
-
-            1.1,
-
-            5
-        )
-
-        for (
-
-                x,
-                y,
-                w,
-                h
-
-        ) in faces:
-
-            face = frame[
-
-                y:y+h,
-
-                x:x+w
-
-            ]
-
-            filename = os.path.join(
-
-                folder,
-
-                f"{image_count}.jpg"
-
-            )
-
-            cv2.imwrite(
-
-                filename,
-
-                face
-            )
-
-            embedding = DeepFace.represent(
-
-                img_path=face,
-
-                model_name="Facenet",
-
-                enforce_detection=False
-
-            )
-
-            vector = np.array(
-
-                embedding[0][
-                    "embedding"
-                ]
-
-            )
-
-            embeddings.append(
-                vector
-            )
-
-            image_count += 1
-
-            cv2.rectangle(
-
-                frame,
-
-                (x, y),
-
-                (x+w, y+h),
-
-                (0,255,0),
-
-                2
-            )
-
-            cv2.putText(
-
-                frame,
-
-                f"Captured:{image_count}/{MAX_IMAGES}",
-
-                (20,40),
-
-                cv2.FONT_HERSHEY_SIMPLEX,
-
-                1,
-
-                (0,255,0),
-
-                2
-            )
-
-        cv2.imshow(
-
-            "Registration",
-
-            frame
-        )
-
-        if cv2.waitKey(1) & 0xFF == ord("q"):
-
-            break
-
-    camera.release()
-
-    cv2.destroyAllWindows()
-
-    if len(embeddings) == 0:
-
-        return (
-
-            False,
-
-            "No face detected"
-
-        )
-
-    """
-    Description:
-        Create average embedding.
-
-    Args:
-        embeddings
-
-    Returns:
-        average vector
-    """
-
-    average = np.mean(
-
-        embeddings,
-
-        axis=0
-    )
-
-    exists, matched_person = face_exists(
+    exists,matched_person=face_exists(
 
         average
 
     )
+
 
     if exists:
 
@@ -353,9 +125,11 @@ def register_user(
 
         )
 
-    connection = connect_db()
 
-    cursor = connection.cursor()
+    connection=connect_db()
+
+    cursor=connection.cursor()
+
 
     cursor.execute(
         """
@@ -389,21 +163,28 @@ def register_user(
         (
 
             name,
+
             employee_id,
+
             email,
+
             department,
 
             Json(
                 average.tolist()
             )
+
         )
+
     )
+
 
     connection.commit()
 
     cursor.close()
 
     connection.close()
+
 
     return (
 

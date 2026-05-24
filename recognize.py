@@ -1,11 +1,14 @@
 import cv2
 import psycopg2
 import numpy as np
-
+import os
 from deepface import DeepFace
 from sklearn.metrics.pairwise import cosine_similarity
 from attendance import mark_attendance
+from unknown_face import save_unknown
+from datetime import datetime
 
+last_unknown_save = None
 """
 Description:
     Connect to PostgreSQL database.
@@ -119,6 +122,7 @@ Returns:
 
 def recognize_face():
 
+    global last_unknown_save
     known_faces = load_faces()
 
     print(
@@ -128,7 +132,7 @@ def recognize_face():
     )
 
     camera = cv2.VideoCapture(0)
-    last_detected_name = None
+    recent_faces = {}
 
     detector = cv2.CascadeClassifier(
         "haarcascade_frontalface_default.xml"
@@ -219,18 +223,111 @@ def recognize_face():
                     best_emp = "N/A"
                     best_dept = "Unknown"
                     best_email = "N/A"
+
+
+                    current_time = datetime.now()
+
+
+                    if (
+
+                        last_unknown_save is None
+
+                        or
+
+                        (
+
+                            current_time
+                            -
+                            last_unknown_save
+
+                        ).seconds > 10
+
+                    ):
+
+                        os.makedirs(
+
+                            "unknown_faces",
+
+                            exist_ok=True
+
+                        )
+
+
+                        timestamp=current_time.strftime(
+
+                            "%Y%m%d_%H%M%S"
+
+                        )
+
+
+                        filename=(
+
+                            f"unknown_faces/"
+                            f"{timestamp}.jpg"
+
+                        )
+
+
+                        cv2.imwrite(
+
+                            filename,
+
+                            frame
+
+                        )
+
+
+                        save_unknown(
+
+                            filename
+
+                        )
+
+
+                        last_unknown_save=current_time
+
+
+                        print(
+
+                            f"Unknown face saved: "
+
+                            f"{filename}"
+
+                        )
                 
-                if (
-                        best_name != "Unknown"
-                        and best_name != last_detected_name
-                ):
+                if best_name != "Unknown":
 
-                    mark_attendance(
-                        best_emp,
-                        best_name
-                    )
+                    current_time = datetime.now()
 
-                    last_detected_name = best_name
+                    if (
+
+                        best_name not in recent_faces
+
+                        or
+
+                        (
+
+                            current_time
+                            -
+                            recent_faces[
+                                best_name
+                            ]
+
+                        ).seconds > 10
+
+                    ):
+
+                        mark_attendance(
+
+                            best_emp,
+
+                            best_name
+
+                        )
+
+                        recent_faces[
+                            best_name
+                        ] = current_time
 
 
                 label1 = f"{best_name}"

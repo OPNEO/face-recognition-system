@@ -9,3 +9,4 @@ streamlit
 pandas
 plotly
 streamlit-autorefresh
+streamlit-camera-input-live
