@@ -81,7 +81,7 @@ face_recog/
 # Step 1: Clone Repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/face-recognition-attendance.git
+git clone https://github.com/OPNEO/face-recognition-system.git
 
 cd face-recognition-attendance
 ```
